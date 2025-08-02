@@ -34,7 +34,7 @@ if st.button("🆕 New Chat"):
         # Save current chat to logs
         st.session_state.chat_logs.append(st.session_state.history.copy())
     st.session_state.history = []  # Reset current chat
-    st.experimental_rerun()
+    st.rerun()
 
 # --- View Old Chats ---
 if st.session_state.chat_logs:
