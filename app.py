@@ -3,38 +3,62 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 import os
 
-# Load the API key
+# Load .env for API key
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
-# Configure the model
+# Check API key
+if not GOOGLE_API_KEY:
+    st.error("❌ GOOGLE_API_KEY not found in environment variables.")
+    st.stop()
+
+# Configure Gemini model
 genai.configure(api_key=GOOGLE_API_KEY)
-model = genai.GenerativeModel(model_name="models/gemini-2.5-pro")
+model = genai.GenerativeModel("models/gemini-1.5-pro-latest")
 
-
-# Streamlit UI setup
+# Page setup
 st.set_page_config(page_title="Gemini Chatbot", layout="centered")
 st.title("💬 Gemini Pro Chatbot")
 st.markdown("Ask anything. Powered by Google's Gemini Pro API.")
 
-# Chat history state
+# --- Session State Setup ---
 if "history" not in st.session_state:
     st.session_state.history = []
 
-# Display previous messages
+if "chat_logs" not in st.session_state:
+    st.session_state.chat_logs = []
+
+# --- New Chat Button ---
+if st.button("🆕 New Chat"):
+    if st.session_state.history:
+        # Save current chat to logs
+        st.session_state.chat_logs.append(st.session_state.history.copy())
+    st.session_state.history = []  # Reset current chat
+    st.experimental_rerun()
+
+# --- View Old Chats ---
+if st.session_state.chat_logs:
+    with st.expander("📜 View Previous Chats"):
+        for i, chat in enumerate(st.session_state.chat_logs):
+            st.markdown(f"**Chat #{i+1}:**")
+            for msg in chat:
+                st.markdown(f"**{msg['role'].capitalize()}**: {msg['content']}")
+            st.markdown("---")
+
+# --- Display Current Chat ---
 for msg in st.session_state.history:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# Chat input
+# --- Input ---
 prompt = st.chat_input("Type your message here...")
 
 if prompt:
-    # Show user message
+    # User message
     st.chat_message("user").markdown(prompt)
     st.session_state.history.append({"role": "user", "content": prompt})
 
-    # Call Gemini API
+    # Gemini Response
     with st.spinner("Thinking..."):
         try:
             response = model.generate_content(prompt)
@@ -42,6 +66,6 @@ if prompt:
         except Exception as e:
             reply = f"❌ Error: {e}"
 
-    # Show bot reply
+    # Assistant reply
     st.chat_message("assistant").markdown(reply)
     st.session_state.history.append({"role": "assistant", "content": reply})
