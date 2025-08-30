@@ -3,25 +3,36 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 import os
 
-# Load .env for API key
+# --- Load API Key ---
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
-# Check API key
 if not GOOGLE_API_KEY:
     st.error("❌ GOOGLE_API_KEY not found in environment variables.")
     st.stop()
 
-# Configure Gemini model
-genai.configure(api_key=GOOGLE_API_KEY)
-model = genai.GenerativeModel("models/gemini-1.5-flash")  # Flash = cheaper & faster
+# --- Model Options ---
+MODEL_OPTIONS = {
+    "Gemini Flash (fast & cheap)": "models/gemini-1.5-flash",
+    "Gemini Pro (advanced)": "models/gemini-1.5-pro-latest",
+}
 
-# --- Page setup ---
+# --- Sidebar: Model Selector ---
+with st.sidebar:
+    st.header("⚙️ Settings")
+    selected_model_name = st.selectbox("Choose Model:", list(MODEL_OPTIONS.keys()))
+    selected_model = MODEL_OPTIONS[selected_model_name]
+
+# --- Configure Gemini ---
+genai.configure(api_key=GOOGLE_API_KEY)
+model = genai.GenerativeModel(selected_model)
+
+# --- Page Setup ---
 st.set_page_config(page_title="💬 Gemini Chatbot", layout="wide")
 st.title("🤖 Gemini Chatbot")
-st.markdown("Ask anything. Powered by **Google's Gemini API** ✨")
+st.markdown(f"Using **{selected_model_name}** ⚡")
 
-# --- Custom CSS for better UI ---
+# --- Custom CSS ---
 st.markdown(
     """
     <style>
@@ -34,15 +45,14 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# --- Session State Setup ---
+# --- Session State ---
 if "history" not in st.session_state:
     st.session_state.history = []
 if "chat_logs" not in st.session_state:
     st.session_state.chat_logs = []
 
-# --- Sidebar ---
+# --- Sidebar Chat Controls ---
 with st.sidebar:
-    st.header("⚙️ Chat Controls")
     if st.button("🆕 New Chat"):
         if st.session_state.history:
             st.session_state.chat_logs.append(st.session_state.history.copy())
@@ -68,17 +78,14 @@ with chat_container:
             unsafe_allow_html=True,
         )
 
-# --- Input Box ---
+# --- Input ---
 prompt = st.chat_input("Type your message here...")
 
 if prompt:
-    # User message
     st.session_state.history.append({"role": "user", "content": prompt})
-
     with chat_container:
         st.markdown(f"<div class='stChatMessage user-msg'>{prompt}</div>", unsafe_allow_html=True)
 
-    # Gemini Response
     with st.spinner("🤔 Thinking..."):
         try:
             response = model.generate_content(prompt)
@@ -87,6 +94,5 @@ if prompt:
             reply = f"❌ Error: {e}"
 
     st.session_state.history.append({"role": "assistant", "content": reply})
-
     with chat_container:
         st.markdown(f"<div class='stChatMessage assistant-msg'>{reply}</div>", unsafe_allow_html=True)
